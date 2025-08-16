@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<link rel="icon" type="image/png" href="files/konrad.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gra w Konrada M. bo RODO</title>
+<style>
+  html, body { 
+    margin: 0; 
+    height: 100%; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; /* pionowe wyśrodkowanie */
+    align-items: center; /* poziome wyśrodkowanie */
+    background: #f0f8ff; 
+    font-family: sans-serif; 
+    user-select: none; 
+  }
+  canvas { border: 2px solid #333; background: #a3d5f7; display: block; }
+  .controls { margin-top: 10px; display: flex; gap: 20px; }
+  .controls button { padding: 20px 40px; font-size: 22px; border-radius: 10px; cursor: pointer; }
+  .info { margin-top: 10px; font-size: 20px; color: #333; min-height: 24px; text-align: center; }
+  #restartBtn { margin-top: 10px; padding: 15px 30px; font-size: 22px; border-radius: 10px; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+<div class="controls">
+  <button id="leftBtn">⬅</button>
+  <button id="rightBtn">➡</button>
+</div>
+<div class="info" id="info"></div>
+<button id="restartBtn">Spróbuj jeszcze raz</button>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const info = document.getElementById('info');
+const restartBtn = document.getElementById('restartBtn');
+
+const konradImg = new Image(); konradImg.src = 'files/konrad.png';
+const eggImg = new Image(); eggImg.src = 'files/egg.png';
+const chickenImg = new Image(); chickenImg.src = 'files/chicken.png';
+const bookImg = new Image(); bookImg.src = 'files/book.png';
+
+let konrad = { x: 350, y: 500, width: 100, height: 100, speed: 7 };
+let objects = [], missed = 0, score = 0, keys = {}, gameOver = false;
+
+function spawnObject() {
+  if(gameOver) return;
+  const types = [eggImg, chickenImg, bookImg];
+  const img = types[Math.floor(Math.random()*types.length)];
+  objects.push({ img, x: Math.random()*(canvas.width-60), y: -60, width: 60, height: 60, speed: 3 + Math.random()*3 });
+}
+
+function drawKonrad(){ ctx.drawImage(konradImg, konrad.x, konrad.y, konrad.width, konrad.height); }
+function drawObjects(){ objects.forEach(obj=>ctx.drawImage(obj.img,obj.x,obj.y,obj.width,obj.height)); }
+
+function checkCollision(obj){
+  return konrad.x < obj.x + obj.width &&
+         konrad.x + konrad.width > obj.x &&
+         konrad.y < obj.y + obj.height &&
+         konrad.y + konrad.height > obj.y;
+}
+
+function updateObjects(){
+  for(let i=objects.length-1;i>=0;i--){
+    const obj = objects[i];
+    obj.y += obj.speed;
+    if(obj.y > canvas.height){
+      objects.splice(i,1);
+      missed++;
+      updateInfo();
+      if(missed >= 5){
+        gameOver = true;
+        info.textContent = `Aj karamba! Konrad ma dziurawe ręce!\nTwój wynik: ${score}, Przegapione: ${missed}/5`;
+      }
+    }
+    else if(checkCollision(obj)){
+      score++;
+      objects.splice(i,1);
+      updateInfo();
+    }
+  }
+}
+
+
+function updateInfo(){
+  if(!gameOver){
+    info.textContent = `Wynik: ${score}, Przegapione: ${missed}/5`;
+  }
+}
+
+function updateKonrad(){
+  if(keys['ArrowLeft'] || keys['a']) konrad.x -= konrad.speed;
+  if(keys['ArrowRight'] || keys['d']) konrad.x += konrad.speed;
+  if(konrad.x < 0) konrad.x = 0;
+  if(konrad.x + konrad.width > canvas.width) konrad.x = canvas.width - konrad.width;
+}
+
+function resetGame(){
+  konrad = { x: 350, y: 500, width: 100, height: 100, speed: 7 };
+  objects = [];
+  missed = 0;
+  score = 0;
+  gameOver = false;
+  updateInfo();
+}
+
+function gameLoop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!gameOver){
+    updateKonrad();
+    updateObjects();
+  }
+  drawKonrad();
+  drawObjects();
+  requestAnimationFrame(gameLoop);
+}
+
+document.addEventListener('keydown', e=>keys[e.key]=true);
+document.addEventListener('keyup', e=>keys[e.key]=false);
+document.getElementById('leftBtn').addEventListener('mousedown', ()=>keys['ArrowLeft']=true);
+document.getElementById('leftBtn').addEventListener('mouseup', ()=>keys['ArrowLeft']=false);
+document.getElementById('rightBtn').addEventListener('mousedown', ()=>keys['ArrowRight']=true);
+document.getElementById('rightBtn').addEventListener('mouseup', ()=>keys['ArrowRight']=false);
+restartBtn.addEventListener('click', resetGame);
+
+setInterval(spawnObject, 800);
+updateInfo();
+gameLoop();
+</script>
+</body>
+</html>
